@@ -1,0 +1,73 @@
+#include <SoftwareSerial.h>
+
+// Define the pins for sensors
+const int turbidityPin = A0;
+const int pHPin = A1;
+
+// Define WiFi module pins
+const int espTxPin = 2; // Connect ESP TX to Arduino pin 2
+const int espRxPin = 3; // Connect ESP RX to Arduino pin 3
+
+// Create SoftwareSerial object for communication with WiFi module
+SoftwareSerial espSerial(espRxPin, espTxPin); // Note the change in order
+
+void setup() {
+  // Start serial communication
+  Serial.begin(9600);
+
+  // Initialize SoftwareSerial for communication with WiFi module
+  espSerial.begin(9600);
+
+  // Wait for initialization of the WiFi module
+  delay(1000);
+
+  // Print initial message
+  Serial.println("Arduino Uno with Turbidity and pH sensors and WiFi module");
+}
+
+void loop() {
+  // Read sensor values
+  int turbidityValue = analogRead(turbidityPin);
+  int pHValue = analogRead(pHPin);
+
+  // Print sensor values to serial monitor
+  Serial.print("Turbidity: ");
+  Serial.print(turbidityValue);
+  Serial.print(", pH: ");
+  Serial.println(pHValue);
+
+  // Send sensor data to a server using the WiFi module (replace "your_server_address" with the actual server address)
+  sendSensorData(turbidityValue, pHValue);
+
+  // Wait for a moment before taking the next reading
+  delay(5000);
+}
+
+void sendSensorData(int turbidity, int pH) {
+  // Connect to the WiFi module
+  espSerial.println("AT+CIPSTART=\"TCP\",\"your_server_address\",80");
+
+  // Wait for a moment
+  delay(2000);
+
+  // Prepare the data to be sent
+  String postData = "turbidity=" + String(turbidity) + "&pH=" + String(pH);
+
+  // Send HTTP POST request
+  espSerial.print("AT+CIPSEND=");
+  espSerial.println(postData.length() + 4);
+  delay(500);
+  espSerial.print("POST /updateData HTTP/1.1\r\n");
+  espSerial.print("Host: your_server_address\r\n");
+  espSerial.print("Content-Type: application/x-www-form-urlencoded\r\n");
+  espSerial.print("Content-Length: ");
+  espSerial.println(postData.length());
+  espSerial.print("\r\n");
+  espSerial.print(postData);
+
+  // Wait for a moment
+  delay(2000);
+
+  // Close the connection
+  espSerial.println("AT+CIPCLOSE");
+}
